@@ -3,6 +3,8 @@
 
 Forecasts revenue & stock price for the next 5 years based on historic data (T-Mobile Dataset) 
 
-Code & Marketing Report in the Uploaded files.
+R language, ARIMA model, Twitter Scraping
 
 Accuracy Achieved - 55%
+
+(Code & Marketing Report in the Uploaded files)
