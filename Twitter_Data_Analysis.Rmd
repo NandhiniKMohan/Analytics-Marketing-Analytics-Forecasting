@@ -1,0 +1,655 @@
+---
+title: "Twitter_Data_Analysis"
+author: "Nandhini K Mohan"
+date: "04/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Tweet Extraction & Initian Column Selection
+consumer_key <- "bANl02Tn6RpShQEOtWOilRlsb"
+consumer_secret <- "lLhIr4sDnfIFFfRHquobmLz4y9eYaxQAwEJNtPb3Z95nXQ3vby"
+access_token <- "319484970-MIBcDzWTfeZen1WiiouZaIHapTDybbOCLX3kgLfy"
+access_secret <- "a8fBrHUE7IRUAqRyXvxDEzFIBlutEX1Lnom9VuoY1bB1P"
+app_name <- "LillyBost"
+
+
+my_authorization <- rtweet::create_token(app = app_name,
+consumer_key = consumer_key,
+consumer_secret = consumer_secret, access_token=access_token, access_secret = access_secret)
+
+#TMobile
+TMobile_tweets <- rtweet::get_timeline(c("TMobile"), n = 10000, parse=T,since = "2018-01-01 00:00:00", until = "2022-04-30 00:00:00", token=my_authorization)
+
+rtweet::write_as_csv(TMobile_tweets, "TMobile_tweets.csv", prepend_ids = TRUE, na = "", fileEncoding = "UTF-8")
+
+TMobile_tweets
+
+#ATT
+ATT_tweets <- rtweet::get_timeline(c("ATT"), n = 10000, parse=T,since = "2018-01-01 00:00:00", until = "2022-04-30 00:00:00", token=my_authorization)
+
+rtweet::write_as_csv(ATT_tweets, "ATT_tweets.csv", prepend_ids = TRUE, na = "", fileEncoding = "UTF-8")
+
+ATT_tweets
+
+#Verizon
+Verizon_tweets <- rtweet::get_timeline(c("Verizon"), n = 10000, parse=T,since = "2018-01-01 00:00:00", until = "2022-04-30 00:00:00", token=my_authorization)
+
+rtweet::write_as_csv(Verizon_tweets, "Verizon_tweets.csv", prepend_ids = TRUE, na = "", fileEncoding = "UTF-8")
+
+Verizon_tweets
+
+#TMobile_tweets <- read.csv("TMobile_tweets.csv")
+#ATT_tweets <- read.csv("ATT_tweets.csv")
+#Verizon_tweets <- read.csv("Verizon_tweets.csv")
+
+
+#TMobile_tweets <- TMobile_tweets[-c(6,11,15,18,19,20,21,22,23,24,26,27,28,29,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,74,75,76,77,83,84,85,86,87,88,89,90)]
+
+#ATT_tweets <- ATT_tweets[-c(6,11,15,18,19,20,21,22,23,24,26,27,28,29,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,74,75,76,77,83,84,85,86,87,88,89,90)]
+
+#Verizon_tweets <- Verizon_tweets[-c(6,11,15,18,19,20,21,22,23,24,26,27,28,29,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,74,75,76,77,83,84,85,86,87,88,89,90)]
+
+#Manually selected the columns eventually as it was causing unexpected issues.
+
+library(openxlsx)
+TMobile_tweets <- read.xlsx("TMobile_tweets.xlsx")
+ATT_tweets <- read.xlsx("ATT_tweets.xlsx")
+Verizon_tweets <- read.xlsx("Verizon_tweets.xlsx")
+
+```
+
+
+```{r}
+#T-mobile data readiness
+#Tweet Categorization
+for(x in 1:nrow(TMobile_tweets)){
+  if(is.na(TMobile_tweets$reply_to_user_id[x]))
+  {
+    TMobile_tweets$reply_to_user_id[x]=0
+  }
+}
+
+Category <-character(nrow(TMobile_tweets))
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$is_retweet[x]=="TRUE") {
+    Category[x] <- 'Retweet'} else if (TMobile_tweets$reply_to_user_id[x]!=0){
+      Category[x] <- 'Reply'
+    }else {Category[x] <- 'Original Tweet'}
+}
+
+TMobile_tweets$Category <- Category
+
+
+#HasHastag Flag Determination
+for(x in 1:nrow(TMobile_tweets)){
+  if(is.na(TMobile_tweets$hashtags[x]))
+  {
+    TMobile_tweets$hashtags[x]=0
+  }
+}
+
+HasHashtag <-numeric(nrow(TMobile_tweets))
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$hashtags[x]==0) {
+    HasHashtag[x] <- 0} 
+  else {HasHashtag[x] <- 1}
+}
+
+TMobile_tweets$HasHashtag <- HasHashtag
+
+
+#HasMention Flag Determination
+for(x in 1:nrow(TMobile_tweets)){
+  if(is.na(TMobile_tweets$mentions_user_id[x]))
+  {
+    TMobile_tweets$mentions_user_id[x]=0
+  }
+}
+
+HasMention <-numeric(nrow(TMobile_tweets))
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$mentions_user_id[x]==0) {
+    HasMention[x] <- 0} 
+  else {HasMention[x] <- 1}
+}
+
+TMobile_tweets$HasMention <- HasMention
+
+#MediaType Categorization
+for(x in 1:nrow(TMobile_tweets)){
+  if(is.na(TMobile_tweets$media_type[x]))
+  {
+    TMobile_tweets$media_type[x]=0
+  }
+}
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$media_type[x]==0) {
+    TMobile_tweets$media_type[x] <- 'Text'} 
+  else {TMobile_tweets$media_type[x] <- 'Photo/Video'}
+}
+```
+
+```{r}
+#Calculation for T-Mobile:
+# Count of Replies - Photo/Video, Text, Hashtag, Mentions
+R_Photo_Count<-0
+R_Text_Count <- 0
+R_Hastag_Count <- 0
+R_Mention_Count <- 0
+
+Sum_R_Photo_Count<-0
+Sum_R_Text_Count <- 0
+Sum_R_Hastag_Count<-0
+Sum_R_Mention_Count <- 0
+
+Avg_R_Photo_Count<-0
+Avg_R_Text_Count <- 0
+Avg_R_Hastag_Count<-0
+Avg_R_Mention_Count <- 0
+#------------------------#
+OT_Photo_Count<-0
+OT_Text_Count <- 0
+OT_Hastag_Count <- 0
+OT_Mention_Count <- 0
+
+Sum_OT_Photo_Count<-0
+Sum_OT_Text_Count <- 0
+Sum_OT_Hastag_Count<-0
+Sum_OT_Mention_Count <- 0
+
+Avg_OT_Photo_Count<-0
+Avg_OT_Text_Count <- 0
+Avg_OT_Hastag_Count<-0
+Avg_OT_Mention_Count <- 0
+#------------------------#
+
+
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$Category[x]=='Reply' && TMobile_tweets$media_type[x]=='Photo/Video') {
+    R_Photo_Count <- R_Photo_Count + 1
+    Sum_R_Photo_Count <- Sum_R_Photo_Count+TMobile_tweets$favorite_count[x]
+  } else if((TMobile_tweets$Category[x]=='Reply' && TMobile_tweets$media_type[x]=='Text')) {
+    R_Text_Count <- R_Text_Count + 1
+    Sum_R_Text_Count <- Sum_R_Text_Count+TMobile_tweets$favorite_count[x]
+  }
+}
+
+
+Avg_R_Photo_Count<-Sum_R_Photo_Count/R_Photo_Count
+Avg_R_Text_Count <- Sum_R_Text_Count/R_Text_Count
+
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$Category[x]=='Reply' && TMobile_tweets$HasHashtag[x]==1) {
+    R_Hastag_Count <- R_Hastag_Count + 1
+    Sum_R_Hastag_Count <- Sum_R_Hastag_Count+TMobile_tweets$favorite_count[x]
+    }
+}
+
+Avg_R_Hastag_Count<-Sum_R_Hastag_Count/R_Hastag_Count
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$Category[x]=='Reply' && TMobile_tweets$HasMention[x]==1) {
+    R_Mention_Count <- R_Mention_Count + 1
+    Sum_R_Mention_Count <- Sum_R_Mention_Count+TMobile_tweets$favorite_count[x]
+    }
+}
+Avg_R_Mention_Count<-Sum_R_Mention_Count/R_Mention_Count
+
+R_Photo_Count
+R_Text_Count 
+R_Hastag_Count
+R_Mention_Count
+
+Avg_R_Photo_Count
+Avg_R_Text_Count 
+Avg_R_Hastag_Count
+Avg_R_Mention_Count 
+
+# Count of Original Tweets - Photo/Video, Text, Hashtag, Mentions
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$Category[x]=='Original Tweet' && TMobile_tweets$media_type[x]=='Photo/Video') {
+    OT_Photo_Count <- OT_Photo_Count + 1
+    Sum_OT_Photo_Count <- Sum_OT_Photo_Count+TMobile_tweets$favorite_count[x]
+  } else if((TMobile_tweets$Category[x]=='Original Tweet' && TMobile_tweets$media_type[x]=='Text')) {
+    OT_Text_Count <- OT_Text_Count + 1
+    Sum_OT_Text_Count <- Sum_OT_Text_Count+TMobile_tweets$favorite_count[x]
+  }
+}
+
+
+Avg_OT_Photo_Count<-Sum_OT_Photo_Count/OT_Photo_Count
+Avg_OT_Text_Count <- Sum_OT_Text_Count/OT_Text_Count
+
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$Category[x]=='Original Tweet' && TMobile_tweets$HasHashtag[x]==1) {
+    OT_Hastag_Count <- OT_Hastag_Count + 1
+    Sum_OT_Hastag_Count <- Sum_OT_Hastag_Count+TMobile_tweets$favorite_count[x]
+    }
+}
+
+Avg_OT_Hastag_Count<-Sum_OT_Hastag_Count/OT_Hastag_Count
+
+for (x in 1:nrow(TMobile_tweets)){
+  if (TMobile_tweets$Category[x]=='Original Tweet' && TMobile_tweets$HasMention[x]==1) {
+    OT_Mention_Count <- OT_Mention_Count + 1
+    Sum_OT_Mention_Count<- Sum_OT_Mention_Count+TMobile_tweets$favorite_count[x]
+    }
+}
+Avg_OT_Mention_Count <-Sum_OT_Mention_Count/OT_Mention_Count
+
+OT_Photo_Count
+OT_Text_Count 
+OT_Hastag_Count
+OT_Mention_Count
+
+Avg_OT_Photo_Count
+Avg_OT_Text_Count 
+Avg_OT_Hastag_Count
+Avg_OT_Mention_Count 
+```
+
+
+
+```{r}
+#ATT data readiness
+#Tweet Categorization
+for(x in 1:nrow(ATT_tweets)){
+  if(is.na(ATT_tweets$reply_to_user_id[x]))
+  {
+    ATT_tweets$reply_to_user_id[x]=0
+  }
+}
+
+Category <-character(nrow(ATT_tweets))
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$is_retweet[x]=="TRUE") {
+    Category[x] <- 'Retweet'} else if (ATT_tweets$reply_to_user_id[x]!=0){
+      Category[x] <- 'Reply'
+    }else {Category[x] <- 'Original Tweet'}
+}
+
+ATT_tweets$Category <- Category
+
+
+#HasHastag Flag Determination
+for(x in 1:nrow(ATT_tweets)){
+  if(is.na(ATT_tweets$hashtags[x]))
+  {
+    ATT_tweets$hashtags[x]=0
+  }
+}
+
+HasHashtag <-numeric(nrow(ATT_tweets))
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$hashtags[x]==0) {
+    HasHashtag[x] <- 0} 
+  else {HasHashtag[x] <- 1}
+}
+
+ATT_tweets$HasHashtag <- HasHashtag
+
+
+#HasMention Flag Determination
+for(x in 1:nrow(ATT_tweets)){
+  if(is.na(ATT_tweets$mentions_user_id[x]))
+  {
+    ATT_tweets$mentions_user_id[x]=0
+  }
+}
+
+HasMention <-numeric(nrow(ATT_tweets))
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$mentions_user_id[x]==0) {
+    HasMention[x] <- 0} 
+  else {HasMention[x] <- 1}
+}
+
+ATT_tweets$HasMention <- HasMention
+
+#MediaType Categorization
+for(x in 1:nrow(ATT_tweets)){
+  if(is.na(ATT_tweets$media_type[x]))
+  {
+    ATT_tweets$media_type[x]=0
+  }
+}
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$media_type[x]==0) {
+    ATT_tweets$media_type[x] <- 'Text'} 
+  else {ATT_tweets$media_type[x] <- 'Photo/Video'}
+}
+```
+
+```{r}
+#Calculation for ATT:
+# Count of Replies - Photo/Video, Text, Hashtag, Mentions
+R_Photo_Count<-0
+R_Text_Count <- 0
+R_Hastag_Count <- 0
+R_Mention_Count <- 0
+
+Sum_R_Photo_Count<-0
+Sum_R_Text_Count <- 0
+Sum_R_Hastag_Count<-0
+Sum_R_Mention_Count <- 0
+
+Avg_R_Photo_Count<-0
+Avg_R_Text_Count <- 0
+Avg_R_Hastag_Count<-0
+Avg_R_Mention_Count <- 0
+#------------------------#
+OT_Photo_Count<-0
+OT_Text_Count <- 0
+OT_Hastag_Count <- 0
+OT_Mention_Count <- 0
+
+Sum_OT_Photo_Count<-0
+Sum_OT_Text_Count <- 0
+Sum_OT_Hastag_Count<-0
+Sum_OT_Mention_Count <- 0
+
+Avg_OT_Photo_Count<-0
+Avg_OT_Text_Count <- 0
+Avg_OT_Hastag_Count<-0
+Avg_OT_Mention_Count <- 0
+#------------------------#
+
+
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$Category[x]=='Reply' && ATT_tweets$media_type[x]=='Photo/Video') {
+    R_Photo_Count <- R_Photo_Count + 1
+    Sum_R_Photo_Count <- Sum_R_Photo_Count+ATT_tweets$favorite_count[x]
+  } else if((ATT_tweets$Category[x]=='Reply' && ATT_tweets$media_type[x]=='Text')) {
+    R_Text_Count <- R_Text_Count + 1
+    Sum_R_Text_Count <- Sum_R_Text_Count+ATT_tweets$favorite_count[x]
+  }
+}
+
+
+Avg_R_Photo_Count<-Sum_R_Photo_Count/R_Photo_Count
+Avg_R_Text_Count <- Sum_R_Text_Count/R_Text_Count
+
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$Category[x]=='Reply' && ATT_tweets$HasHashtag[x]==1) {
+    R_Hastag_Count <- R_Hastag_Count + 1
+    Sum_R_Hastag_Count <- Sum_R_Hastag_Count+ATT_tweets$favorite_count[x]
+    }
+}
+
+Avg_R_Hastag_Count<-Sum_R_Hastag_Count/R_Hastag_Count
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$Category[x]=='Reply' && ATT_tweets$HasMention[x]==1) {
+    R_Mention_Count <- R_Mention_Count + 1
+    Sum_R_Mention_Count <- Sum_R_Mention_Count+ATT_tweets$favorite_count[x]
+    }
+}
+Avg_R_Mention_Count<-Sum_R_Mention_Count/R_Mention_Count
+
+R_Photo_Count
+R_Text_Count 
+R_Hastag_Count
+R_Mention_Count
+
+Avg_R_Photo_Count
+Avg_R_Text_Count 
+Avg_R_Hastag_Count
+Avg_R_Mention_Count 
+
+# Count of Original Tweets - Photo/Video, Text, Hashtag, Mentions
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$Category[x]=='Original Tweet' && ATT_tweets$media_type[x]=='Photo/Video') {
+    OT_Photo_Count <- OT_Photo_Count + 1
+    Sum_OT_Photo_Count <- Sum_OT_Photo_Count+ATT_tweets$favorite_count[x]
+  } else if((ATT_tweets$Category[x]=='Original Tweet' && ATT_tweets$media_type[x]=='Text')) {
+    OT_Text_Count <- OT_Text_Count + 1
+    Sum_OT_Text_Count <- Sum_OT_Text_Count+ATT_tweets$favorite_count[x]
+  }
+}
+
+
+Avg_OT_Photo_Count<-Sum_OT_Photo_Count/OT_Photo_Count
+Avg_OT_Text_Count <- Sum_OT_Text_Count/OT_Text_Count
+
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$Category[x]=='Original Tweet' && ATT_tweets$HasHashtag[x]==1) {
+    OT_Hastag_Count <- OT_Hastag_Count + 1
+    Sum_OT_Hastag_Count <- Sum_OT_Hastag_Count+ATT_tweets$favorite_count[x]
+    }
+}
+
+Avg_OT_Hastag_Count<-Sum_OT_Hastag_Count/OT_Hastag_Count
+
+for (x in 1:nrow(ATT_tweets)){
+  if (ATT_tweets$Category[x]=='Original Tweet' && ATT_tweets$HasMention[x]==1) {
+    OT_Mention_Count <- OT_Mention_Count + 1
+    Sum_OT_Mention_Count<- Sum_OT_Mention_Count+ATT_tweets$favorite_count[x]
+    }
+}
+Avg_OT_Mention_Count <-Sum_OT_Mention_Count/OT_Mention_Count
+
+OT_Photo_Count
+OT_Text_Count 
+OT_Hastag_Count
+OT_Mention_Count
+
+Avg_OT_Photo_Count
+Avg_OT_Text_Count 
+Avg_OT_Hastag_Count
+Avg_OT_Mention_Count 
+```
+
+```{r}
+#Verizon data readiness
+#Tweet Categorization
+for(x in 1:nrow(Verizon_tweets)){
+  if(is.na(Verizon_tweets$reply_to_user_id[x]))
+  {
+    Verizon_tweets$reply_to_user_id[x]=0
+  }
+}
+
+Category <-character(nrow(Verizon_tweets))
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$is_retweet[x]=="TRUE") {
+    Category[x] <- 'Retweet'} else if (Verizon_tweets$reply_to_user_id[x]!=0){
+      Category[x] <- 'Reply'
+    }else {Category[x] <- 'Original Tweet'}
+}
+
+Verizon_tweets$Category <- Category
+
+
+#HasHastag Flag Determination
+for(x in 1:nrow(Verizon_tweets)){
+  if(is.na(Verizon_tweets$hashtags[x]))
+  {
+    Verizon_tweets$hashtags[x]=0
+  }
+}
+
+HasHashtag <-numeric(nrow(Verizon_tweets))
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$hashtags[x]==0) {
+    HasHashtag[x] <- 0} 
+  else {HasHashtag[x] <- 1}
+}
+
+Verizon_tweets$HasHashtag <- HasHashtag
+
+
+#HasMention Flag Determination
+for(x in 1:nrow(Verizon_tweets)){
+  if(is.na(Verizon_tweets$mentions_user_id[x]))
+  {
+    Verizon_tweets$mentions_user_id[x]=0
+  }
+}
+
+HasMention <-numeric(nrow(Verizon_tweets))
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$mentions_user_id[x]==0) {
+    HasMention[x] <- 0} 
+  else {HasMention[x] <- 1}
+}
+
+Verizon_tweets$HasMention <- HasMention
+
+#MediaType Categorization
+for(x in 1:nrow(Verizon_tweets)){
+  if(is.na(Verizon_tweets$media_type[x]))
+  {
+    Verizon_tweets$media_type[x]=0
+  }
+}
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$media_type[x]==0) {
+    Verizon_tweets$media_type[x] <- 'Text'} 
+  else {Verizon_tweets$media_type[x] <- 'Photo/Video'}
+}
+```
+
+```{r}
+#Calculation for Verizon:
+# Count of Replies - Photo/Video, Text, Hashtag, Mentions
+R_Photo_Count<-0
+R_Text_Count <- 0
+R_Hastag_Count <- 0
+R_Mention_Count <- 0
+
+Sum_R_Photo_Count<-0
+Sum_R_Text_Count <- 0
+Sum_R_Hastag_Count<-0
+Sum_R_Mention_Count <- 0
+
+Avg_R_Photo_Count<-0
+Avg_R_Text_Count <- 0
+Avg_R_Hastag_Count<-0
+Avg_R_Mention_Count <- 0
+#------------------------#
+OT_Photo_Count<-0
+OT_Text_Count <- 0
+OT_Hastag_Count <- 0
+OT_Mention_Count <- 0
+
+Sum_OT_Photo_Count<-0
+Sum_OT_Text_Count <- 0
+Sum_OT_Hastag_Count<-0
+Sum_OT_Mention_Count <- 0
+
+Avg_OT_Photo_Count<-0
+Avg_OT_Text_Count <- 0
+Avg_OT_Hastag_Count<-0
+Avg_OT_Mention_Count <- 0
+#------------------------#
+
+
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$Category[x]=='Reply' && Verizon_tweets$media_type[x]=='Photo/Video') {
+    R_Photo_Count <- R_Photo_Count + 1
+    Sum_R_Photo_Count <- Sum_R_Photo_Count+Verizon_tweets$favorite_count[x]
+  } else if((Verizon_tweets$Category[x]=='Reply' && Verizon_tweets$media_type[x]=='Text')) {
+    R_Text_Count <- R_Text_Count + 1
+    Sum_R_Text_Count <- Sum_R_Text_Count+Verizon_tweets$favorite_count[x]
+  }
+}
+
+
+Avg_R_Photo_Count<-Sum_R_Photo_Count/R_Photo_Count
+Avg_R_Text_Count <- Sum_R_Text_Count/R_Text_Count
+
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$Category[x]=='Reply' && Verizon_tweets$HasHashtag[x]==1) {
+    R_Hastag_Count <- R_Hastag_Count + 1
+    Sum_R_Hastag_Count <- Sum_R_Hastag_Count+Verizon_tweets$favorite_count[x]
+    }
+}
+
+Avg_R_Hastag_Count<-Sum_R_Hastag_Count/R_Hastag_Count
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$Category[x]=='Reply' && Verizon_tweets$HasMention[x]==1) {
+    R_Mention_Count <- R_Mention_Count + 1
+    Sum_R_Mention_Count <- Sum_R_Mention_Count+Verizon_tweets$favorite_count[x]
+    }
+}
+Avg_R_Mention_Count<-Sum_R_Mention_Count/R_Mention_Count
+
+R_Photo_Count
+R_Text_Count 
+R_Hastag_Count
+R_Mention_Count
+
+Avg_R_Photo_Count
+Avg_R_Text_Count 
+Avg_R_Hastag_Count
+Avg_R_Mention_Count 
+
+# Count of Original Tweets - Photo/Video, Text, Hashtag, Mentions
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$Category[x]=='Original Tweet' && Verizon_tweets$media_type[x]=='Photo/Video') {
+    OT_Photo_Count <- OT_Photo_Count + 1
+    Sum_OT_Photo_Count <- Sum_OT_Photo_Count+Verizon_tweets$favorite_count[x]
+  } else if((Verizon_tweets$Category[x]=='Original Tweet' && Verizon_tweets$media_type[x]=='Text')) {
+    OT_Text_Count <- OT_Text_Count + 1
+    Sum_OT_Text_Count <- Sum_OT_Text_Count+Verizon_tweets$favorite_count[x]
+  }
+}
+
+
+Avg_OT_Photo_Count<-Sum_OT_Photo_Count/OT_Photo_Count
+Avg_OT_Text_Count <- Sum_OT_Text_Count/OT_Text_Count
+
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$Category[x]=='Original Tweet' && Verizon_tweets$HasHashtag[x]==1) {
+    OT_Hastag_Count <- OT_Hastag_Count + 1
+    Sum_OT_Hastag_Count <- Sum_OT_Hastag_Count+Verizon_tweets$favorite_count[x]
+    }
+}
+
+Avg_OT_Hastag_Count<-Sum_OT_Hastag_Count/OT_Hastag_Count
+
+for (x in 1:nrow(Verizon_tweets)){
+  if (Verizon_tweets$Category[x]=='Original Tweet' && Verizon_tweets$HasMention[x]==1) {
+    OT_Mention_Count <- OT_Mention_Count + 1
+    Sum_OT_Mention_Count<- Sum_OT_Mention_Count+Verizon_tweets$favorite_count[x]
+    }
+}
+Avg_OT_Mention_Count <-Sum_OT_Mention_Count/OT_Mention_Count
+
+OT_Photo_Count
+OT_Text_Count 
+OT_Hastag_Count
+OT_Mention_Count
+
+Avg_OT_Photo_Count
+Avg_OT_Text_Count 
+Avg_OT_Hastag_Count
+Avg_OT_Mention_Count 
+```
