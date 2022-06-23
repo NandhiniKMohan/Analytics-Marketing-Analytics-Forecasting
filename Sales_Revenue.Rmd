@@ -1,0 +1,60 @@
+---
+title: "Sales_Revenue"
+author: "Nandhini K Mohan"
+date: "30/04/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Revenue of T-Mobile(2011 to 2021)
+```{r}
+x <- c(20.62, 19.72, 24.61, 29.92, 32.47, 37.49, 40.6, 42.31, 45, 68.4, 80.12)
+```
+	
+	
+# creating time series object
+```{r}
+
+mts <- ts(x, start=2011, frequency=1)
+```
+
+	
+#Fixing the plot margin
+```{r}
+par(mar = c(1, 1, 1, 1))
+```
+
+#Plotting the graph
+```{r}
+plot(mts, xlab ="Year",
+		ylab ="Revenue in billions$",
+		main ="Revenue of T-Mobile (2011 to 2021)",
+		col.main ="darkblue")
+```
+#Loading forecast
+```{r}
+library(forecast)
+```
+
+
+#Forecasting using Arima model	
+```{r}
+fit <- auto.arima(mts)
+```
+
+#Forecasting revenue of next 5 years
+```{r}
+forecast(fit,5)
+```
+
+#Plotting revenue of next 5 years
+```{r}
+plot(forecast(fit,5), xlab="Year", ylab="Revenue in billions $", main="Revenue of T-Mobile (2022 to 2026)", col.main="darkblue")
+```
+
+

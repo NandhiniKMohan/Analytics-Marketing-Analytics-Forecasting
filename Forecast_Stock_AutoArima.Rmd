@@ -1,0 +1,125 @@
+---
+title: "Forecast_Stock_AutoArima"
+author: "Nandhini K Mohan"
+date: "01/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Loading Libraries
+```{r}
+library(quantmod)
+library(tseries)
+library(timeSeries)
+library(forecast)
+library(xts)
+```
+
+#Fetching TMobile data from Yahoo Finance
+```{r}
+tmus_data <- getSymbols(Symbols = "TMUS", src = "yahoo", from = '2021-05-02', 
+        to = Sys.Date(), auto.assign = FALSE)
+head(tmus_data)
+```
+
+#Taking the 4th column i.e., Close price into separate dataframe
+```{r}
+close_price <- tmus_data[,4]
+head(close_price)
+```
+#Calculating log return
+```{r}
+log_return <- diff(log(close_price), lag=1)
+log_return <- log_return[!is.na(log_return)]
+head(log_return)
+```
+#Plotting the graph of log return
+```{r}
+plot(log_return, type='l', main='log return plot')
+```
+
+#ADF Test on log_return to check for stationarity
+```{r}
+print(adf.test(log_return))
+```
+#Splitting the dataset into train data and test data
+```{r}
+breakpoint = floor(nrow(log_return)*(2.9/3))
+head(breakpoint)
+```
+#Plotting ACF and PACF 
+```{r}
+par(mfrow= c(1,1))
+acf.log_return = acf(log_return[c(1:breakpoint),], main='ACF Plot', lag.max = 100)
+
+pacf.log_return = pacf(log_return[c(1:breakpoint),], main='PACF Plot', lag.max = 100)
+```
+#Actual series
+```{r}
+Actual = xts(0, as.Date("2022-01-01", "%Y-%m-%d"))
+Actual
+```
+#Forecasted series
+```{r}
+forecasted_series = data.frame(Forecasted=numeric())
+
+for(b in breakpoint:(nrow(log_return)-1))
+{
+train_data = log_return[1:b,]
+test_data = log_return[(b+1):nrow(log_return),]
+
+#auto.arima automatically chooses the best fit model
+fit = auto.arima(train_data)
+summary(fit)
+
+acf(fit$residuals, main="Residual Plot")
+
+arima.forecast = forecast(fit, h=1, level=99)
+summary(arima.forecast)
+
+par(mfrow=c(1,1))
+plot(arima.forecast, main="Arima Forecast")
+
+forecasted_series = rbind(forecasted_series, arima.forecast$mean[1])
+colnames(forecasted_series)=c("Forecasted")
+
+Actual_return = log_return[(b+1),]
+Actual = c(Actual, xts(Actual_return))
+rm(Actual_return)
+
+print(close_price[(b+1),])
+print(close_price[(b+2),])
+}
+```
+#Adjusting the length of Actual series
+```{r}
+Actual = Actual[-1]
+```
+#Time series object of the forecast
+```{r}
+forecasted_series = xts(forecasted_series, index(Actual))
+```
+#Plotting Actual vs Forecasted returns
+```{r}
+par(mar = c(1, 1, 1, 1))
+plot(Actual, type='l', main='Actual Returns')
+lines(forecasted_series, lwd=1.5, col='green')
+#legend('bottomright', c("Actual", "Forecasted"), lty=c(1,1), lwd=c(1.5,1.5), col=c('black', 'red'))
+
+legend('bottomright', legend=c("Actual", "Forecasted"), lty=c(1,1), lwd=c(1.5,1.5), col = c("blue","green"))
+```
+#Accuracy of the forecast
+```{r}
+comparison = merge(Actual, forecasted_series)
+comparison$Accuracy = sign(comparison$Actual) == sign(comparison$Forecasted)
+print(comparison)
+```
+#Computing the Accuracy percentage
+```{r}
+Accuracy_percentage_2= sum(comparison$Accuracy ==1)*100/length(comparison$Accuracy)
+print(paste("Accuracy Percentage using the fittest model by auto.arima: " ,Accuracy_percentage_2))
+```
+##Accuracy of (2,0,2) Arima Model: 44.4445%
+##Accuracy on using auto.arima: 55.5556%
